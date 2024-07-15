@@ -121,6 +121,31 @@ async def patch(id: UUID4, db_session: DatabaseDependency, atleta_up: AtletaUpda
 
     return atleta
 
+@router.get(
+    '/', 
+    summary='Consultar todos os Atletas',
+    status_code=status.HTTP_200_OK,
+    response_model=list[AtletaOut],
+)
+async def query(
+    db_session: DatabaseDependency,
+    atleta: Optional[str] = Query(None, description="Nome do atleta"),
+    nome: Optional[str] = Query(None, description="Nome completo"),
+    cpf: Optional[str] = Query(None, description="CPF do atleta"),
+) -> list[AtletaOut]:
+    query_stmt = select(AtletaModel)
+    
+    if atleta:
+        query_stmt = query_stmt.filter(AtletaModel.nome.ilike(f"%{atleta}%"))
+    if nome:
+        query_stmt = query_stmt.filter(AtletaModel.nome.ilike(f"%{nome}%"))
+    if cpf:
+        query_stmt = query_stmt.filter(AtletaModel.cpf == cpf)
+
+    atletas: list[AtletaOut] = (await db_session.execute(query_stmt)).scalars().all()
+    
+    return [AtletaOut.model_validate(atleta) for atleta in atletas]
+
 
 @router.delete(
     '/{id}', 
